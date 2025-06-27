@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alfresko Canopy Configurator</title>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Professional Configuration Navigation -->
+        <nav class="config-navigation">
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <button class="nav-link active" data-tab="canopy">Canopy Type</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <div class="dropdown-grid">
+                                <div class="dropdown-option selected">Free Standing Canopy</div>
+                                <div class="dropdown-option">Wall Mounted Canopy</div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                
+                <li class="nav-item">
+                    <button class="nav-link" data-tab="roof">Roof Type</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <div class="dropdown-grid">
+                                <div class="dropdown-option">Clear Polycarbonate</div>
+                                <div class="dropdown-option">Tinted Polycarbonate</div>
+                                <div class="dropdown-option">Tempered Glass</div>
+                                <div class="dropdown-option">Insulated Panels</div>
+                                <div class="dropdown-option">Solar Panels</div>
+                                <div class="dropdown-option">Retractable Fabric</div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                
+                <li class="nav-item">
+                    <button class="nav-link" data-tab="size">Size</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <div class="size-options">
+                                <div class="size-option">
+                                    <span>Small</span>
+                                    <span class="size-dimensions">3m × 2m</span>
+                                </div>
+                                <div class="size-option">
+                                    <span>Medium</span>
+                                    <span class="size-dimensions">4m × 3m</span>
+                                </div>
+                                <div class="size-option">
+                                    <span>Large</span>
+                                    <span class="size-dimensions">6m × 4m</span>
+                                </div>
+                                <div class="size-option">
+                                    <span>Extra Large</span>
+                                    <span class="size-dimensions">8m × 5m</span>
+                                </div>
+                                <div class="size-option">
+                                    <span>Custom Size</span>
+                                    <span class="size-dimensions">Your dimensions</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                
+                <li class="nav-item">
+                    <button class="nav-link" data-tab="walls">Walls</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <div class="wall-options">
+                                <div class="wall-selection">
+                                    <div class="wall-checkbox">
+                                        <input type="checkbox" id="front-wall">
+                                        <label for="front-wall">Front Wall</label>
+                                    </div>
+                                    <div class="wall-checkbox">
+                                        <input type="checkbox" id="back-wall">
+                                        <label for="back-wall">Back Wall</label>
+                                    </div>
+                                    <div class="wall-checkbox">
+                                        <input type="checkbox" id="left-wall">
+                                        <label for="left-wall">Left Wall</label>
+                                    </div>
+                                    <div class="wall-checkbox">
+                                        <input type="checkbox" id="right-wall">
+                                        <label for="right-wall">Right Wall</label>
+                                    </div>
+                                </div>
+                                <div class="wall-types-grid">
+                                    <div class="wall-type">Glass Panels</div>
+                                    <div class="wall-type">Polycarbonate</div>
+                                    <div class="wall-type">Privacy Screen</div>
+                                    <div class="wall-type">Mesh Screen</div>
+                                    <div class="wall-type">Solid Panel</div>
+                                    <div class="wall-type">Bi-fold Doors</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                
+                <li class="nav-item">
+                    <button class="nav-link" data-tab="accessories">Accessories</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <div class="dropdown-grid">
+                                <div class="dropdown-option">LED Lighting</div>
+                                <div class="dropdown-option">Ceiling Fans</div>
+                                <div class="dropdown-option">Heating System</div>
+                                <div class="dropdown-option">Sound System</div>
+                                <div class="dropdown-option">Remote Control</div>
+                                <div class="dropdown-option">Weather Sensors</div>
+                                <div class="dropdown-option">Guttering</div>
+                                <div class="dropdown-option">Drainage System</div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                
+                <li class="nav-item">
+                    <button class="nav-link" data-tab="colour">Colour</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <div class="color-palette">
+                                <div class="color-option">
+                                    <div class="color-swatch" style="background: #2c3e50;"></div>
+                                    <span class="color-name">Charcoal</span>
+                                </div>
+                                <div class="color-option">
+                                    <div class="color-swatch" style="background: #ffffff; border: 1px solid #ddd;"></div>
+                                    <span class="color-name">White</span>
+                                </div>
+                                <div class="color-option">
+                                    <div class="color-swatch" style="background: #8B4513;"></div>
+                                    <span class="color-name">Bronze</span>
+                                </div>
+                                <div class="color-option">
+                                    <div class="color-swatch" style="background: #708090;"></div>
+                                    <span class="color-name">Slate Grey</span>
+                                </div>
+                                <div class="color-option">
+                                    <div class="color-swatch" style="background: #228B22;"></div>
+                                    <span class="color-name">Forest Green</span>
+                                </div>
+                                <div class="color-option">
+                                    <div class="color-swatch" style="background: #8B0000;"></div>
+                                    <span class="color-name">Deep Red</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Visualization and Side Content -->
+        <div class="visualization-and-content">
+            <!-- 3D Visualization Area -->
+            <div id="visualization-area">
+                <canvas id="scene-canvas"></canvas>
+            </div>
+
+            <!-- Side Content (Description and Customer Info) -->
+            <div class="side-content">
+                
+                <div class="customer-info">
+                    <div class="info-header">
+                        <div class="info-title">Details</div>
+                        <div class="info-subtitle">For Instant Price</div>
+                    </div>
+                    <form>
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" placeholder="Enter your full name">
+                        </div>
+                        <div class="form-group">
+                            <label for="address">Address</label>
+                            <textarea id="address" name="address" placeholder="Enter your complete address"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="postcode">Post Code</label>
+                            <input type="text" id="postcode" name="postcode" placeholder="Enter post code">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" placeholder="Enter your email address">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone</label>
+                            <input type="tel" id="phone" name="phone" placeholder="Enter your phone number">
+                        </div>
+                        <button type="button" class="submit-button">Submit for Cost</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="company-info">
+                Professional Installation - Local Business - Warranty - Quality Product - Life Changing
+            </div>
+            <div class="contact-info">
+                0191 3737549
+            </div>
+        </footer>
+    </div>
+    <script type="module" src="js/index.js"></script>
+</body>
+</html>
