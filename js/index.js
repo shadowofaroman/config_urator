@@ -220,19 +220,18 @@ class CanopyConfigurator3D {
     createFreeStandingConfiguration(config) {
         console.log("Creating free-standing canopy (2 units)");
         
-        // Clone the template twice
         const unit1 = this.canopyModelTemplate.clone();
         const unit2 = this.canopyModelTemplate.clone();
-        
-        // Position the units to form a free-standing structure
-        // For now using fixed positioning, but this will be dynamic based on L & W
-        const spacing = this.calculateUnitSpacing(config);
-        
-        unit1.position.set(-spacing/2, 0, 0);
-        unit2.position.set(spacing/2, 0, 0);
+    
+        // GET the calculated positions
+        const positioning = this.calculateCanopyPositioning(config, 'free-standing');
+    
+    // USE the calculated positions
+    unit1.position.set(positioning.unit1.x, positioning.unit1.y, positioning.unit1.z);
+    unit2.position.set(positioning.unit2.x, positioning.unit2.y, positioning.unit2.z);
         
         // Mirror the second unit so they face each other (optional - depends on your model)
-        //nit2.rotation.y = Math.PI;
+        unit2.rotation.y = Math.PI;
         
         // Apply common properties to both units
         this.setupModelProperties(unit1);
@@ -253,9 +252,10 @@ class CanopyConfigurator3D {
         
         // Clone the template once
         const unit = this.canopyModelTemplate.clone();
+        const spacing = this.calculateUnitSpacing(config);
         
         // Position for wall mounting (against back wall)
-        unit.position.set(-15/2, 0, 0); // Adjust Z to position against wall
+        unit.position.set(spacing/2, 0, 20); // Adjust Z to position against wall
         
         // Apply common properties
         this.setupModelProperties(unit);
@@ -266,37 +266,60 @@ class CanopyConfigurator3D {
         console.log("Wall-mounted canopy created with 1 unit");
     }
 
+    calculateCanopyPositioning(config, canopyType) {
+    // Base measurements - these can be made configurable later
+    const baseSpacing = config.length || 15;
+    const baseDepthOffset = 22.5; // Average of your 20 and 25 values
+    const wallMountZ = 20; // Standard wall-mount position
+    
+    if (canopyType === 'free-standing') {
+        return {
+            unit1: {
+                x: baseSpacing / 2,
+                y: 0,
+                z: wallMountZ
+            },
+            unit2: {
+                x: -baseSpacing / 2,
+                y: 0,
+                z: -baseDepthOffset - 2.5 // Slightly more than your -25
+            }
+        };
+    } else { // wall-mounted
+        return {
+            unit1: {
+                x: baseSpacing / 2,
+                y: 0,
+                z: wallMountZ
+            }
+        };
+    }
+}
+
     /**
      * Calculate spacing between units for free-standing configuration
      * This will be dynamic based on length/width in future
      */
     calculateUnitSpacing(config) {
-        // For now, return a fixed spacing
-        // Future: return config.length * scaleFactor;
-        return 0; // Fixed spacing for now
+        return config.length ? config.length : 15;
     }
 
     /**
      * Future method: Update canopy positioning based on dimensions
      */
-    updateCanopyDimensions(config) {
-        console.log(`Updating dimensions: L=${config.length}m, W=${config.width}m`);
-        
-        if (!this.currentCanopyGroup) return;
-        
-        // This will recalculate positioning based on new L & W values
-        // For now, just log the change
-        const spacing = this.calculateUnitSpacing(config);
-        
-        // In future, update positions of existing units
-        if (config.canopyType === 'free-standing') {
-            const units = this.currentCanopyGroup.children;
-            if (units.length === 2) {
-                units[0].position.x = -spacing/2;
-                units[1].position.x = spacing/2;
-            }
-        }
+updateCanopyDimensions(config) {
+    if (!this.currentCanopyGroup || this.currentCanopyGroup.children.length === 0) return;
+    
+    // Get NEW positions based on NEW config
+    const positioning = this.calculateCanopyPositioning(config, config.canopyType);
+    const units = this.currentCanopyGroup.children;
+    
+    if (config.canopyType === 'free-standing' && units.length === 2) {
+        // Move existing units to new positions
+        units[0].position.set(positioning.unit1.x, positioning.unit1.y, positioning.unit1.z);
+        units[1].position.set(positioning.unit2.x, positioning.unit2.y, positioning.unit2.z);
     }
+}
 
     loadGLTFModel(path) {
         return new Promise((resolve, reject) => {
