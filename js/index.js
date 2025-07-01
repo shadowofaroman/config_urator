@@ -111,12 +111,16 @@ class DropdownHandler {
 // 3D Scene Manager - handles all 3D operations with scalable model approach
 class CanopyConfigurator3D {
     constructor(configState) {
-        console.log("Creating Canopy Configurator 3D instance...");
+        //console.log("Creating Canopy Configurator 3D instance...");
         this.configState = configState;
         
         // Store loaded model template for reuse
         this.canopyModelTemplate = null;
         this.currentCanopyGroup = null; // Group containing all canopy instances
+
+        this.roofTemplates = {};
+        this.currentRoofGroup = null;
+
         this.loader = new GLTFLoader();
         
         // Listen for configuration changes
@@ -146,14 +150,21 @@ class CanopyConfigurator3D {
         switch(key) {
             case 'canopyType':
                 this.updateCanopyConfiguration(fullConfig);
+                this.updateRoofConfiguration(fullConfig);
+                break;
+            case 'roofType':
+                // NEW: Handle roof type changes
+                this.updateRoofConfiguration(fullConfig);
                 break;
             case 'color':
                 this.updateCanopyColor(value);
+                this.updateRoofColor(value);
                 break;
             case 'length':
             case 'width':
                 // Future feature: Update positioning based on dimensions
                 this.updateCanopyDimensions(fullConfig);
+                this.updateRoofDimensions(fullConfig);
                 break;
         }
     }
@@ -163,7 +174,7 @@ class CanopyConfigurator3D {
      * This is your single 3D model file
      */
     async loadCanopyTemplate() {
-        console.log("Loading canopy model template...");
+        //console.log("Loading canopy model template...");
         
         try {
             const modelPath = 'models/freestanding_white.glb';
@@ -172,10 +183,12 @@ class CanopyConfigurator3D {
             // Store the template - we'll clone this for each instance
             this.canopyModelTemplate = gltf.scene;
             
-            console.log("Canopy template loaded successfully");
+            //console.log("Canopy template loaded successfully");
+            await this.loadRoofTemplates(); // Load roof templates after canopy
             
             // Now create the initial canopy configuration
             this.updateCanopyConfiguration(this.configState.getConfig());
+            this.updateRoofConfiguration(this.configState.getConfig());
             
         } catch (error) {
             console.error("Failed to load canopy template:", error);
@@ -185,12 +198,60 @@ class CanopyConfigurator3D {
         }
     }
 
+    async loadRoofTemplates() {
+        console.log("Loading roof templates...");
+        const roofTypes = [
+            'flat_glass_white',
+            //'slopped_glass',
+            //'slopped_polycarbonate',
+            //'flat_louvred',
+            //'flat_louvred_retractable'
+        ];
+
+        for (const type of roofTypes) {
+            const modelPath = `models/roof/${type}.glb`;
+            this.roofTemplates[type] = await this.loadGLTFModel(modelPath);
+        }
+
+        console.log("Roof templates loaded successfully");
+    }
+
+    getRoofTemplateKey(roofType) {
+        const mapping = {
+            'Flat glass roof': 'flat_glass_white',
+            //'Slopped Glass Roof': 'slopped_glass',
+            //'Slopped Polycarbonate Roof': 'slopped_polycarbonate',
+            //'Flat Louvred Roof': 'flat_louvred',
+            //'Flat Louvred Retractable Roof': 'flat_louvred_retractable'
+        };
+        return mapping[roofType] || roofType?.toLowerCase();
+    }
+
+    updateRoofConfiguration(config) {
+    if (this.currentRoofGroup) {
+        this.scene.remove(this.currentRoofGroup);
+    }
+    this.currentRoofGroup = new THREE.Group();
+
+    const templateKey = this.getRoofTemplateKey(config.roofType);
+    const roofTemplate = this.roofTemplates[templateKey];
+    if (!roofTemplate) {
+        console.warn("No roof template available for", templateKey);
+        return;
+    }
+
+    const roofModel = roofTemplate.scene ? roofTemplate.scene.clone() : roofTemplate.clone();
+    this.setupModelProperties(roofModel);
+    this.currentRoofGroup.add(roofModel);
+    this.scene.add(this.currentRoofGroup);
+}
+
     /**
      * Update the canopy configuration based on type (wall-mounted vs free-standing)
      * This is where the magic happens - one model vs two models
      */
     updateCanopyConfiguration(config) {
-        console.log(`Updating canopy configuration for: ${config.canopyType}`);
+        //console.log(`Updating canopy configuration for: ${config.canopyType}`);
         
         // Remove existing canopy group
         if (this.currentCanopyGroup) {
@@ -374,7 +435,7 @@ updateCanopyDimensions(config) {
      * Fallback method if 3D model fails to load
      */
     createFallbackTemplate() {
-        console.log("Creating fallback template");
+        
         
         const templateGroup = new THREE.Group();
         
@@ -401,7 +462,6 @@ updateCanopyDimensions(config) {
     }
 
     setUpScene() {
-        console.log("Setting up scene...");
         this.scene = new THREE.Scene();
 
         const canvas = document.createElement('canvas');
@@ -450,7 +510,7 @@ updateCanopyDimensions(config) {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     }
     setUpControls() {
-        console.log("Setting up controls...");
+        
         const container = document.getElementById('visualization-area');
     
         // Make it a property of the class (important!)
@@ -469,7 +529,7 @@ updateCanopyDimensions(config) {
     }
 
     setUpLights() {
-        console.log("Setting up lights...");
+        
 
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambientLight);
@@ -499,7 +559,7 @@ updateCanopyDimensions(config) {
     }
 
     setUpRender() {
-        console.log("Setting up render loop...");
+        
         const animate = () => {
             requestAnimationFrame(animate);
             // this.controls.update();
