@@ -1,26 +1,63 @@
 import * as THREE from "https://cdn.skypack.dev/three@0.129.0/build/three.module.js";
 import { GLTFLoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js";
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/controls/OrbitControls.js';
 
 // Configuration state manager - keeps track of all selections
 class ConfigurationState {
     constructor() {
         this.config = {
-            canopyType: 'free-standing', // default
+            canopyType: 'free-standing',
             roofType: null,
             size: null,
             walls: [],
             accessories: [],
             color: null,
-            // Future scalability - dimensions
-            length: 6, // default length in meters
-            width: 4   // default width in meters
+            // Dynamic dimensions based on size selection
+            length: 6,
+            width: 4
         };
         this.listeners = [];
     }
 
     updateConfig(key, value) {
+        // Handle special case for size updates - trigger dimension recalculation
+        if (key === 'size') {
+            this.updateDimensionsFromSize(value);
+        }
+        
         this.config[key] = value;
         this.notifyListeners(key, value);
+    }
+
+    updateDimensionsFromSize(sizeString) {
+        const dimensions = this.parseSizeString(sizeString);
+        if (dimensions) {
+            this.config.length = dimensions.length;
+            this.config.width = dimensions.width;
+        }
+    }
+
+    parseSizeString(sizeString) {
+        if (!sizeString) return null;
+        
+        // Parse common size formats: "6m x 4m", "6 x 4", "Large (8x6)", etc.
+        const match = sizeString.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/i);
+        if (match) {
+            return {
+                length: parseFloat(match[1]),
+                width: parseFloat(match[2])
+            };
+        }
+        
+        // Fallback size mappings
+        const sizeMap = {
+            'Small': { length: 4, width: 3 },
+            'Medium': { length: 6, width: 4 },
+            'Large': { length: 8, width: 6 },
+            'Extra Large': { length: 10, width: 8 }
+        };
+        
+        return sizeMap[sizeString] || null;
     }
 
     onChange(callback) {
@@ -33,6 +70,115 @@ class ConfigurationState {
 
     getConfig() {
         return { ...this.config };
+    }
+}
+
+// Dynamic Positioning Calculator - The heart of our refactoring
+class PositioningCalculator {
+    constructor() {
+        // Configuration-driven spacing rules
+        this.spacingRules = {
+            // Base spacing multipliers by size
+            spacing: {
+                small: 1.0,
+                medium: 1.2,
+                large: 1.5,
+                extraLarge: 1.8
+            },
+            // Depth offset calculations
+            depth: {
+                wallMountZ: 20,
+                freeStandingBase: 22.5,
+                additionalDepthPerMeter: 2.5
+            },
+            // Ground and camera positioning
+            environment: {
+                groundLevel: -25,
+                cameraHeightMultiplier: 0.8,
+                cameraDistanceMultiplier: 2.5
+            }
+        };
+    }
+
+    calculateCanopyPositioning(config) {
+        const spacing = this.getSpacingForSize(config);
+        const depth = this.getDepthForSize(config);
+        
+        if (config.canopyType === 'free-standing') {
+            return {
+                unit1: {
+                    x: spacing / 2,
+                    y: 0,
+                    z: this.spacingRules.depth.wallMountZ
+                },
+                unit2: {
+                    x: -spacing / 2,
+                    y: 0,
+                    z: -depth
+                }
+            };
+        } else {
+            return {
+                unit1: {
+                    x: spacing / 2,
+                    y: 0,
+                    z: this.spacingRules.depth.wallMountZ
+                }
+            };
+        }
+    }
+
+    getSpacingForSize(config) {
+        const baseSpacing = config.length || 6;
+        const sizeMultiplier = this.getSizeMultiplier(config.size);
+        return baseSpacing * sizeMultiplier;
+    }
+
+    getDepthForSize(config) {
+        const baseDepth = this.spacingRules.depth.freeStandingBase;
+        const additionalDepth = (config.width || 4) * this.spacingRules.depth.additionalDepthPerMeter;
+        return baseDepth + additionalDepth;
+    }
+
+    getSizeMultiplier(sizeString) {
+        if (!sizeString) return this.spacingRules.spacing.medium;
+        
+        const size = sizeString.toLowerCase();
+        if (size.includes('small')) return this.spacingRules.spacing.small;
+        if (size.includes('large') && size.includes('extra')) return this.spacingRules.spacing.extraLarge;
+        if (size.includes('large')) return this.spacingRules.spacing.large;
+        return this.spacingRules.spacing.medium;
+    }
+
+    calculateOptimalCameraPosition(config) {
+        const spacing = this.getSpacingForSize(config);
+        const depth = this.getDepthForSize(config);
+        
+        // Dynamic camera positioning based on canopy size
+        const maxDimension = Math.max(spacing, depth);
+        const distance = maxDimension * this.spacingRules.environment.cameraDistanceMultiplier;
+        const height = maxDimension * this.spacingRules.environment.cameraHeightMultiplier;
+        
+        return {
+            x: distance * 0.7,
+            y: height,
+            z: distance * 0.7,
+            lookAt: { x: 0, y: 0, z: 0 }
+        };
+    }
+
+    calculateEnvironmentScale(config) {
+        const spacing = this.getSpacingForSize(config);
+        const depth = this.getDepthForSize(config);
+        const maxDimension = Math.max(spacing, depth);
+        
+        // Scale ground plane to accommodate canopy size
+        const groundScale = Math.max(200, maxDimension * 8);
+        
+        return {
+            groundSize: groundScale,
+            lightDistance: maxDimension * 1.5
+        };
     }
 }
 
@@ -106,15 +252,18 @@ class DropdownHandler {
     }
 }
 
-// 3D Scene Manager - handles all 3D operations with scalable model approach
+// 3D Scene Manager - now with dynamic positioning system
 class CanopyConfigurator3D {
     constructor(configState) {
-        console.log("Creating Canopy Configurator 3D instance...");
         this.configState = configState;
+        this.positionCalculator = new PositioningCalculator();
         
-        // Store loaded model template for reuse
+        // Store loaded model templates
         this.canopyModelTemplate = null;
-        this.currentCanopyGroup = null; // Group containing all canopy instances
+        this.currentCanopyGroup = null;
+        this.roofTemplates = {};
+        this.currentRoofGroup = null;
+
         this.loader = new GLTFLoader();
         
         // Listen for configuration changes
@@ -132,8 +281,8 @@ class CanopyConfigurator3D {
         this.setUpLights();
         this.createEnvironment();
         this.setUpRender();
+        this.setUpControls();
         
-        // Load the base model template first, then create canopy configuration
         this.loadCanopyTemplate();
     }
 
@@ -143,58 +292,102 @@ class CanopyConfigurator3D {
         switch(key) {
             case 'canopyType':
                 this.updateCanopyConfiguration(fullConfig);
+                this.updateRoofConfiguration(fullConfig);
+                this.updateCameraPosition(fullConfig);
+                break;
+            case 'roofType':
+                this.updateRoofConfiguration(fullConfig);
+                break;
+            case 'size':
+                // Size changes trigger comprehensive updates
+                this.updateCanopyConfiguration(fullConfig);
+                this.updateRoofConfiguration(fullConfig);
+                this.updateCameraPosition(fullConfig);
+                this.updateEnvironmentScale(fullConfig);
                 break;
             case 'color':
                 this.updateCanopyColor(value);
+                this.updateRoofColor(value);
                 break;
             case 'length':
             case 'width':
-                // Future feature: Update positioning based on dimensions
+                // Dimension changes trigger positioning updates
                 this.updateCanopyDimensions(fullConfig);
+                this.updateRoofDimensions(fullConfig);
+                this.updateCameraPosition(fullConfig);
                 break;
         }
     }
 
-    /**
-     * Load the base canopy model template that will be reused
-     * This is your single 3D model file
-     */
     async loadCanopyTemplate() {
-        console.log("Loading canopy model template...");
-        
         try {
             const modelPath = 'models/freestanding_white.glb';
             const gltf = await this.loadGLTFModel(modelPath);
             
-            // Store the template - we'll clone this for each instance
             this.canopyModelTemplate = gltf.scene;
-            
             console.log("Canopy template loaded successfully");
             
-            // Now create the initial canopy configuration
+            await this.loadRoofTemplates();
+            
             this.updateCanopyConfiguration(this.configState.getConfig());
+            this.updateRoofConfiguration(this.configState.getConfig());
             
         } catch (error) {
             console.error("Failed to load canopy template:", error);
-            // Fall back to programmatic model
             this.createFallbackTemplate();
             this.updateCanopyConfiguration(this.configState.getConfig());
         }
     }
 
-    /**
-     * Update the canopy configuration based on type (wall-mounted vs free-standing)
-     * This is where the magic happens - one model vs two models
-     */
+    async loadRoofTemplates() {
+        console.log("Loading roof templates...");
+        const roofTypes = ['flat_glass_white'];
+
+        for (const type of roofTypes) {
+            const modelPath = `models/roof/${type}.glb`;
+            this.roofTemplates[type] = await this.loadGLTFModel(modelPath);
+        }
+
+        console.log("Roof templates loaded successfully");
+    }
+
+    getRoofTemplateKey(roofType) {
+        const mapping = {
+            'Flat glass roof': 'flat_glass_white'
+        };
+        return mapping[roofType] || roofType?.toLowerCase();
+    }
+
+    updateRoofConfiguration(config) {
+        if (this.currentRoofGroup) {
+            this.scene.remove(this.currentRoofGroup);
+        }
+        this.currentRoofGroup = new THREE.Group();
+
+        const templateKey = this.getRoofTemplateKey(config.roofType);
+        const roofTemplate = this.roofTemplates[templateKey];
+        if (!roofTemplate) {
+            console.warn("No roof template available for", templateKey);
+            return;
+        }
+
+        const roofModel = roofTemplate.scene ? roofTemplate.scene.clone() : roofTemplate.clone();
+        
+        // Apply dynamic positioning to roof
+        const positioning = this.positionCalculator.calculateCanopyPositioning(config);
+        this.setupModelProperties(roofModel, positioning.unit1);
+        
+        this.currentRoofGroup.add(roofModel);
+        this.scene.add(this.currentRoofGroup);
+    }
+
     updateCanopyConfiguration(config) {
         console.log(`Updating canopy configuration for: ${config.canopyType}`);
         
-        // Remove existing canopy group
         if (this.currentCanopyGroup) {
             this.scene.remove(this.currentCanopyGroup);
         }
 
-        // Create new group for canopy instances
         this.currentCanopyGroup = new THREE.Group();
         
         if (!this.canopyModelTemplate) {
@@ -202,97 +395,115 @@ class CanopyConfigurator3D {
             return;
         }
 
+        // Use dynamic positioning calculator
+        const positioning = this.positionCalculator.calculateCanopyPositioning(config);
+
         if (config.canopyType === 'free-standing') {
-            this.createFreeStandingConfiguration(config);
+            this.createFreeStandingConfiguration(config, positioning);
         } else {
-            this.createWallMountedConfiguration(config);
+            this.createWallMountedConfiguration(config, positioning);
         }
 
         this.scene.add(this.currentCanopyGroup);
     }
 
-    /**
-     * Create free-standing configuration: Two model instances
-     */
-    createFreeStandingConfiguration(config) {
-        console.log("Creating free-standing canopy (2 units)");
+    createFreeStandingConfiguration(config, positioning) {
+        console.log("Creating free-standing canopy (2 units) with dynamic positioning");
         
-        // Clone the template twice
         const unit1 = this.canopyModelTemplate.clone();
         const unit2 = this.canopyModelTemplate.clone();
+
+        unit1.position.set(positioning.unit1.x, positioning.unit1.y, positioning.unit1.z);
+        unit2.position.set(positioning.unit2.x, positioning.unit2.y, positioning.unit2.z);
         
-        // Position the units to form a free-standing structure
-        // For now using fixed positioning, but this will be dynamic based on L & W
-        const spacing = this.calculateUnitSpacing(config);
-        
-        unit1.position.set(-spacing/2, 0, 0);
-        unit2.position.set(spacing/2, 0, 0);
-        
-        // Mirror the second unit so they face each other (optional - depends on your model)
         unit2.rotation.y = Math.PI;
         
-        // Apply common properties to both units
         this.setupModelProperties(unit1);
         this.setupModelProperties(unit2);
         
-        // Add both units to the group
         this.currentCanopyGroup.add(unit1);
         this.currentCanopyGroup.add(unit2);
         
-        console.log("Free-standing canopy created with 2 units");
+        console.log(`Free-standing canopy created with spacing: ${positioning.unit1.x * 2}m`);
     }
 
-    /**
-     * Create wall-mounted configuration: Single model instance
-     */
-    createWallMountedConfiguration(config) {
-        console.log("Creating wall-mounted canopy (1 unit)");
+    createWallMountedConfiguration(config, positioning) {
+        console.log("Creating wall-mounted canopy (1 unit) with dynamic positioning");
         
-        // Clone the template once
         const unit = this.canopyModelTemplate.clone();
+        unit.position.set(positioning.unit1.x, positioning.unit1.y, positioning.unit1.z);
         
-        // Position for wall mounting (against back wall)
-        unit.position.set(0, 0, 10); // Adjust Z to position against wall
-        
-        // Apply common properties
         this.setupModelProperties(unit);
-        
-        // Add to group
         this.currentCanopyGroup.add(unit);
         
-        console.log("Wall-mounted canopy created with 1 unit");
+        console.log(`Wall-mounted canopy created at position: ${positioning.unit1.x}, ${positioning.unit1.z}`);
     }
 
-    /**
-     * Calculate spacing between units for free-standing configuration
-     * This will be dynamic based on length/width in future
-     */
-    calculateUnitSpacing(config) {
-        // For now, return a fixed spacing
-        // Future: return config.length * scaleFactor;
-        return 15; // Fixed spacing for now
-    }
-
-    /**
-     * Future method: Update canopy positioning based on dimensions
-     */
     updateCanopyDimensions(config) {
-        console.log(`Updating dimensions: L=${config.length}m, W=${config.width}m`);
+        if (!this.currentCanopyGroup || this.currentCanopyGroup.children.length === 0) return;
         
-        if (!this.currentCanopyGroup) return;
+        const positioning = this.positionCalculator.calculateCanopyPositioning(config);
+        const units = this.currentCanopyGroup.children;
         
-        // This will recalculate positioning based on new L & W values
-        // For now, just log the change
-        const spacing = this.calculateUnitSpacing(config);
-        
-        // In future, update positions of existing units
-        if (config.canopyType === 'free-standing') {
-            const units = this.currentCanopyGroup.children;
-            if (units.length === 2) {
-                units[0].position.x = -spacing/2;
-                units[1].position.x = spacing/2;
-            }
+        if (config.canopyType === 'free-standing' && units.length === 2) {
+            units[0].position.set(positioning.unit1.x, positioning.unit1.y, positioning.unit1.z);
+            units[1].position.set(positioning.unit2.x, positioning.unit2.y, positioning.unit2.z);
+        } else if (units.length === 1) {
+            units[0].position.set(positioning.unit1.x, positioning.unit1.y, positioning.unit1.z);
         }
+        
+        console.log("Canopy dimensions updated dynamically");
+    }
+
+    updateRoofDimensions(config) {
+        if (!this.currentRoofGroup || this.currentRoofGroup.children.length === 0) return;
+        
+        const positioning = this.positionCalculator.calculateCanopyPositioning(config);
+        const roofUnits = this.currentRoofGroup.children;
+        
+        roofUnits.forEach(unit => {
+            unit.position.set(positioning.unit1.x, positioning.unit1.y, positioning.unit1.z);
+        });
+        
+        console.log("Roof dimensions updated to match canopy");
+    }
+
+    updateCameraPosition(config) {
+        const cameraPos = this.positionCalculator.calculateOptimalCameraPosition(config);
+        
+        // Smoothly animate camera to new position
+        if (this.controls) {
+            this.controls.target.set(cameraPos.lookAt.x, cameraPos.lookAt.y, cameraPos.lookAt.z);
+            this.camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
+            this.controls.update();
+        }
+        
+        console.log(`Camera repositioned for optimal viewing: ${JSON.stringify(cameraPos)}`);
+    }
+
+    updateEnvironmentScale(config) {
+        const envScale = this.positionCalculator.calculateEnvironmentScale(config);
+        
+        // Update ground plane
+        const ground = this.scene.getObjectByName('ground');
+        if (ground) {
+            ground.geometry.dispose();
+            ground.geometry = new THREE.PlaneGeometry(envScale.groundSize, envScale.groundSize);
+        }
+        
+        // Update light positioning
+        const directionalLight = this.scene.children.find(child => 
+            child.type === 'DirectionalLight' && child.castShadow
+        );
+        if (directionalLight) {
+            directionalLight.position.set(
+                envScale.lightDistance, 
+                30, 
+                envScale.lightDistance
+            );
+        }
+        
+        console.log(`Environment scaled: ground=${envScale.groundSize}, light distance=${envScale.lightDistance}`);
     }
 
     loadGLTFModel(path) {
@@ -306,15 +517,13 @@ class CanopyConfigurator3D {
         });
     }
 
-    setupModelProperties(model) {
-        // Set position, scale, rotation as needed
-        model.position.y = -25; // Ground level
+    setupModelProperties(model, positioning = null) {
+        model.position.y = this.positionCalculator.spacingRules.environment.groundLevel;
         model.scale.setScalar(8);
         
-        // Enable shadows
         model.traverse((child) => {
             if (child.isMesh) {
-                child.castShadow = true;
+                //child.castShadow = true;
                 child.receiveShadow = true;
             }
         });
@@ -334,7 +543,6 @@ class CanopyConfigurator3D {
 
         const color = colorMap[colorName] || 0x2c2c2c;
 
-        // Apply color to all units in the group
         this.currentCanopyGroup.traverse((child) => {
             if (child.isMesh && child.material) {
                 if (!child.material.transparent) {
@@ -344,15 +552,32 @@ class CanopyConfigurator3D {
         });
     }
 
-    /**
-     * Fallback method if 3D model fails to load
-     */
+    updateRoofColor(colorName) {
+        if (!this.currentRoofGroup) return;
+
+        const colorMap = {
+            'Charcoal': 0x2c3e50,
+            'White': 0xffffff,
+            'Bronze': 0x8B4513,
+            'Slate Grey': 0x708090,
+            'Forest Green': 0x228B22,
+            'Deep Red': 0x8B0000
+        };
+
+        const color = colorMap[colorName] || 0x2c2c2c;
+
+        this.currentRoofGroup.traverse((child) => {
+            if (child.isMesh && child.material) {
+                if (!child.material.transparent) {
+                    child.material.color.setHex(color);
+                }
+            }
+        });
+    }
+
     createFallbackTemplate() {
-        console.log("Creating fallback template");
-        
         const templateGroup = new THREE.Group();
         
-        // Simple geometric representation
         const postGeometry = new THREE.CylinderGeometry(0.5, 0.5, 25);
         const postMaterial = new THREE.MeshLambertMaterial({ color: 0x2c2c2c });
         const post = new THREE.Mesh(postGeometry, postMaterial);
@@ -375,7 +600,6 @@ class CanopyConfigurator3D {
     }
 
     setUpScene() {
-        console.log("Setting up scene...");
         this.scene = new THREE.Scene();
 
         const canvas = document.createElement('canvas');
@@ -404,8 +628,12 @@ class CanopyConfigurator3D {
             0.1, 
             7000
         );
-        this.camera.position.set(20, 15, 30);
-        this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+        
+        // Use dynamic camera positioning
+        const config = this.configState.getConfig();
+        const cameraPos = this.positionCalculator.calculateOptimalCameraPosition(config);
+        this.camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
+        this.camera.lookAt(new THREE.Vector3(cameraPos.lookAt.x, cameraPos.lookAt.y, cameraPos.lookAt.z));
     }
 
     setUpRenderer() {
@@ -424,14 +652,30 @@ class CanopyConfigurator3D {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     }
 
-    setUpLights() {
-        console.log("Setting up lights...");
+    setUpControls() {
+        const container = document.getElementById('visualization-area');
+        this.controls = new OrbitControls(this.camera, container);
 
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.25;
+        this.controls.enableZoom = true;
+        this.controls.minDistance = 10;
+        this.controls.maxDistance = 100;
+        this.controls.maxPolarAngle = Math.PI / 2;
+
+        this.controls.target.set(0, 0, 0);
+        this.controls.update();
+    }
+
+    setUpLights() {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambientLight);
 
+        const config = this.configState.getConfig();
+        const envScale = this.positionCalculator.calculateEnvironmentScale(config);
+
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(20, 30, 20);
+        directionalLight.position.set(envScale.lightDistance, 30, envScale.lightDistance);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;
@@ -443,21 +687,25 @@ class CanopyConfigurator3D {
     }
 
     createEnvironment() {
-        const groundGeometry = new THREE.PlaneGeometry(200, 200);
+        const config = this.configState.getConfig();
+        const envScale = this.positionCalculator.calculateEnvironmentScale(config);
+
+        const groundGeometry = new THREE.PlaneGeometry(envScale.groundSize, envScale.groundSize);
         const groundMaterial = new THREE.MeshLambertMaterial({ 
             color: 0xd4a574
         });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -25;
+        ground.position.y = this.positionCalculator.spacingRules.environment.groundLevel;
         ground.receiveShadow = true;
+        ground.name = 'ground'; // Name for easy reference
         this.scene.add(ground);
     }
 
     setUpRender() {
-        console.log("Setting up render loop...");
         const animate = () => {
             requestAnimationFrame(animate);
+            this.controls?.update();
             this.renderer.render(this.scene, this.camera);
         };
         animate();

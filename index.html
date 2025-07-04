@@ -8,10 +8,10 @@
 </head>
 <body>
     <div class="container">
-        <!-- Professional Configuration Navigation -->
+
         <nav class="config-navigation">
             <ul class="nav-menu">
-                <li class="nav-item">
+                <li class ="nav-item">
                     <button class="nav-link active" data-tab="canopy">Canopy Type</button>
                     <div class="dropdown-menu">
                         <div class="dropdown-content">
@@ -22,7 +22,29 @@
                         </div>
                     </div>
                 </li>
-                
+                <li class="nav-item size-tab">
+                    <button class="nav-link" data-tab="size">Size</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-content">
+                            <div class="spinner-container">
+                                <div class="spinner-row">
+                                    <span class="spinner-label">Width:</span>
+                                    <div class="spinner-control">
+                                        <input type="number" class="spinner-input" id="width" value="1" min="1" max="10" step="1">
+                                    </div>
+                                    <span class="spinner-unit">m</span>
+                                </div>
+                                <div class="spinner-row">
+                                    <span class="spinner-label">Length:</span>
+                                    <div class="spinner-control">
+                                        <input type="number" class="spinner-input" id="length" value="1" min="1" max="10" step="1">
+                                    </div>
+                                    <span class="spinner-unit">m</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
                 <li class="nav-item">
                     <button class="nav-link" data-tab="roof">Roof Type</button>
                     <div class="dropdown-menu">
@@ -33,42 +55,10 @@
                                 <div class="dropdown-option">Slopped polycarbonate roof</div>
                                 <div class="dropdown-option">Flat roof louvred</div>
                                 <div class="dropdown-option">Flat roof louvred - retractable</div>
-                               
                             </div>
                         </div>
                     </div>
                 </li>
-                
-                <li class="nav-item">
-                    <button class="nav-link" data-tab="size">Size</button>
-                    <div class="dropdown-menu">
-                        <div class="dropdown-content">
-                            <div class="size-options">
-                                <div class="size-option">
-                                    <span>Small</span>
-                                    <span class="size-dimensions">3m × 2m</span>
-                                </div>
-                                <div class="size-option">
-                                    <span>Medium</span>
-                                    <span class="size-dimensions">4m × 3m</span>
-                                </div>
-                                <div class="size-option">
-                                    <span>Large</span>
-                                    <span class="size-dimensions">6m × 4m</span>
-                                </div>
-                                <div class="size-option">
-                                    <span>Extra Large</span>
-                                    <span class="size-dimensions">8m × 5m</span>
-                                </div>
-                                <div class="size-option">
-                                    <span>Custom Size</span>
-                                    <span class="size-dimensions">Your dimensions</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </li>
-                
                 <li class="nav-item">
                     <button class="nav-link" data-tab="walls">Walls</button>
                     <div class="dropdown-menu">
@@ -93,7 +83,7 @@
                                     </div>
                                 </div>
                                 <div class="wall-types-grid">
-                                    <div class="wall-type">Glass Panels</div>
+                                    <div class="wall-type"></div>
                                     <div class="wall-type">Polycarbonate</div>
                                     <div class="wall-type">Privacy Screen</div>
                                     <div class="wall-type">Mesh Screen</div>
@@ -104,7 +94,7 @@
                         </div>
                     </div>
                 </li>
-                
+
                 <li class="nav-item">
                     <button class="nav-link" data-tab="accessories">Accessories</button>
                     <div class="dropdown-menu">
@@ -122,8 +112,8 @@
                         </div>
                     </div>
                 </li>
-                
-                <li class="nav-item">
+
+                 <li class="nav-item">
                     <button class="nav-link" data-tab="colour">Colour</button>
                     <div class="dropdown-menu">
                         <div class="dropdown-content">
@@ -156,10 +146,11 @@
                         </div>
                     </div>
                 </li>
+
             </ul>
         </nav>
 
-        <!-- Visualization and Side Content -->
+                <!-- Visualization and Side Content -->
         <div class="visualization-and-content">
             <!-- 3D Visualization Area -->
             <div id="visualization-area">
@@ -201,16 +192,16 @@
             </div>
         </div>
 
-        <!-- Footer -->
-        <footer class="footer">
+         <footer class="footer">
             <div class="company-info">
-                Professional Installation - Local Business - Warranty - Quality Product - Life Changing
+                Professional Installation - Local Business - Quality Product - Life Changing
             </div>
             <div class="contact-info">
                 0191 3737549
             </div>
         </footer>
     </div>
+
     <script type="module" src="js/index.js"></script>
 </body>
 </html>
