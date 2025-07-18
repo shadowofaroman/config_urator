@@ -469,16 +469,23 @@ class CanopyConfigurator3D {
     }
 
     updateCameraPosition(config) {
-        const cameraPos = this.positionCalculator.calculateOptimalCameraPosition(config);
-        
-        // Smoothly animate camera to new position
-        if (this.controls) {
-            this.controls.target.set(cameraPos.lookAt.x, cameraPos.lookAt.y, cameraPos.lookAt.z);
-            this.camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
-            this.controls.update();
-        }
-        
-        console.log(`Camera repositioned for optimal viewing: ${JSON.stringify(cameraPos)}`);
+       // Step 1: Get where your canopies are positioned
+const positioning = this.positionCalculator.calculateCanopyPositioning(config);
+
+// Step 2: Calculate the real center
+let realCenterX, realCenterZ;
+if (config.canopyType === 'free-standing') {
+    // Average of both canopy positions
+    realCenterX = (positioning.unit1.x + positioning.unit2.x) / 2;
+    realCenterZ = (positioning.unit1.z + positioning.unit2.z) / 2;
+} else {
+    // Just use the single canopy position
+    realCenterX = positioning.unit1.x;
+    realCenterZ = positioning.unit1.z;
+}
+
+// Step 3: Tell the camera controls to rotate around THIS point
+this.controls.target.set(realCenterX, 0, realCenterZ);
     }
 
     updateEnvironmentScale(config) {
@@ -523,7 +530,7 @@ class CanopyConfigurator3D {
         
         model.traverse((child) => {
             if (child.isMesh) {
-                child.castShadow = true;
+                child.castShadow = false;
                 child.receiveShadow = true;
             }
         });
@@ -662,6 +669,13 @@ class CanopyConfigurator3D {
         this.controls.minDistance = 10;
         this.controls.maxDistance = 100;
         this.controls.maxPolarAngle = Math.PI / 2;
+
+        this.controls.enablePan = false;        // Disable panning (right-click drag)
+    this.controls.mouseButtons = {          // Redefine mouse controls
+        LEFT: THREE.MOUSE.ROTATE,           // Left click = rotate
+        MIDDLE: THREE.MOUSE.DOLLY,          // Middle = zoom
+        RIGHT: null                         // Right click = disabled
+    };
 
         this.controls.target.set(0, 0, 0);
         this.controls.update();
