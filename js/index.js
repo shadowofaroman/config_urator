@@ -308,10 +308,47 @@ class Configurator {
 
     createWallMountedCanopy (config, canopyPositioning){
         console.log("creating wall mounted canopy");
+
+        const unitWallMounted = this.canopyModelTemplate.clone();
+        unitWallMounted.position.set(canopyPositioning.unit1.x, -24, canopyPositioning.unit1.z);
+        console.log("Unit Wall Mounted Position:", unitWallMounted.position);
+
+        this.setUpIncreasedZoom(unitWallMounted);
+        this.currentCanopyGroup.add(unitWallMounted);
     }
 
     createFreeStandingCanopy( config, canopyPositioning){
         console.log("Creating free-standing canopy");
+
+        console.log("Canopy Positioning:", canopyPositioning);
+        const canopyPositioningY = -24;
+        const unit1 = this.canopyModelTemplate.clone();
+        const unit2 = this.canopyModelTemplate.clone();
+        unit1.position.set(canopyPositioning.unit1.x, canopyPositioningY, canopyPositioning.unit1.z);
+        unit2.position.set(canopyPositioning.unit2.x, canopyPositioningY, canopyPositioning.unit2.z);
+
+        unit2.rotation.y = Math.PI;
+
+        this.setUpIncreasedZoom(unit1);
+        this.setUpIncreasedZoom(unit2);
+        console.log("Unit 1 Position:", unit1.position);
+        console.log("Unit 2 Position:", unit2.position);
+
+        this.currentCanopyGroup.add(unit1);
+        this.currentCanopyGroup.add(unit2);
+    }
+
+    setUpIncreasedZoom(unit) {
+        unit.traverse((child) => { 
+            if (child.isMesh) {
+                child.castShadow = false;
+                child.receiveShadow = true;
+                child.material.side = THREE.DoubleSide; // Ensure both sides are rendered
+                child.material.transparent = true; // Enable transparency
+                child.material.opacity = 0.9; // Set opacity for better visibility
+            }
+        });
+        unit.scale.set(8, 8, 8  ); // Increase the size for better visibility
     }
 
     loadGLTFModel(modelPath) {
