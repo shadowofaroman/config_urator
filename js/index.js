@@ -161,21 +161,22 @@ class DropdownHandler {
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => this.handleNavClick(e));
         });
+
+        document.querySelectorAll('.spinner-input').forEach(input => {
+        input.addEventListener('input', (e) => this.handleInputChange(e));
+        console.log("Spinner input initialized:", input);
+    });
     }
 
-    handleOptionClick(event) {
-        const option = event.target;
-        const navItem = option.closest('.nav-item');
-        const tabType = navItem.querySelector('.nav-link').dataset.tab;
-        
-        const siblings = option.parentElement.querySelectorAll('.dropdown-option');
-        siblings.forEach(sibling => sibling.classList.remove('selected'));
-        
-        option.classList.add('selected');
-        
-        this.updateConfigFromSelection(tabType, option);
-        
-        this.closeDropdown(option.closest('.dropdown-menu'));
+handleOptionClick(event) {
+    const option = event.target;
+    const navItem = option.closest('.nav-item');
+    const tabType = navItem.querySelector('.nav-link').dataset.tab;
+    const siblings = option.parentElement.querySelectorAll('.dropdown-option');
+    siblings.forEach(sibling => sibling.classList.remove('selected'));
+    option.classList.add('selected');
+    this.updateConfigFromSelection(tabType, option);
+    this.closeDropdown(option.closest('.dropdown-menu'));
     }
 
     updateConfigFromSelection(tabType, option) {
@@ -186,12 +187,14 @@ class DropdownHandler {
                 const canopyType = optionText === 'Free Standing Canopy' ? 'free-standing' : 'wall-mounted';
                 this.configState.updateConfig('canopyType', canopyType);
                 break;
+            case 'size':
+                this.configState.updateConfig('size', optionText);
+                console.log("Size selected:", optionText);
+                break;
             case 'roof':
                 this.configState.updateConfig('roofType', optionText);
                 break;
-            case 'size':
-                this.configState.updateConfig('size', optionText);
-                break;
+
             case 'colour':
                 this.configState.updateConfig('color', optionText);
                 break;
@@ -203,6 +206,30 @@ class DropdownHandler {
         navLinks.forEach(link => link.classList.remove('active'));
         event.target.classList.add('active');
     }
+
+handleInputChange(event) {
+    const input = event.target; 
+    const value = parseFloat(input.value);
+    const dimension = input.id; // 'width' or 'length'
+    
+    console.log(`Input value changed: ${dimension} = ${value}`);
+    
+if (isNaN(value) || value < 1 || value > 10) {
+    alert(`🏗️ CANOPY CONFIGURATOR ALERT\n${dimension.charAt(0).toUpperCase() + dimension.slice(1)} dimensions: 1-10 meters only.\nPlease enter a valid size.`);
+    // Don't update config, but leave user's input visible
+    return;
+}
+    
+    // Update size object, not individual properties
+    const currentConfig = this.configState.getConfig();
+    const newSize = {
+        ...currentConfig.size, // Keep existing dimensions
+        [dimension]: value     // Update this dimension
+    };
+    
+    this.configState.updateConfig('size', newSize);
+    console.log("Size updated:", newSize);
+}
 
     closeDropdown(dropdown) {
         if (dropdown) {
